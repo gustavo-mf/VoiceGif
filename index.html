@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>Simple Command Voice</title>
+		<link rel="stylesheet" href="animate.css">
+		<style type="text/css">
+			body {
+				margin: 0 auto;
+		    width: 100%;
+		    max-width: 850px;
+		    padding: 1em;
+		    box-sizing: border-box;
+			}
+			#start {
+				background-color: #00ffff;
+		    display: block;
+		    border-radius: 50%;
+		    width: fit-content;
+		    float: left;
+			}
+			.mic {
+				width: 50px;
+    		height: 50px;
+    		cursor: pointer;
+			}
+			#outputText {
+				display: flex;
+    		flex-wrap: wrap;
+			}
+			.word {
+				padding: 0.5em;
+		    background-color: #714089;
+		    color: #fff;
+		    width: fit-content;
+		    font-size: 1.5em;
+		    font-weight: bold;
+		    margin: 0.5em;
+		    border-radius: 10px;
+			}
+			.loadGifs {
+				display: none;
+				margin: 0 auto;
+			}
+			.loadGifs.show { display: block; }
+			#container-iframes {
+				display: flex;
+		    max-width: 800px;
+		    width: 100%;
+		    flex-direction: row;
+		    flex-wrap: wrap;
+		    justify-content: center;
+    		margin: 0 auto;
+			}
+			.gif-container {
+				width: 200px;
+    		max-height: 200px;
+    		visibility: hidden;
+    		margin: 1em;
+    		display: flex;
+    		flex-direction: column;
+			}
+			.gif-container > img { 
+				width: 100%; 
+				max-width: 160px;
+			}
+		</style>
+	</head>
+	<body>
+		<a id="start"><img src="mic.svg" alt="mic" class="mic"></a>
+		<div id="outputText"></div>
+		<img src="giphy.webp" class="loadGifs">
+		<div id="container-iframes"></div>
+		<script>
+			(() => {
+				const startBtn = document.querySelector('#start');
+				const outputText = document.querySelector('#outputText');
+
+				function elementLoaded() {
+					this.parentElement.style.visibility = 'visible';
+					this.classList.remove('loading');
+					this.parentElement.classList.add('bounceIn');
+					if (document.querySelectorAll('.loading').length < 1) {
+						document.querySelector('.loadGifs').classList.remove('show');
+					}
+				}
+				function mouseMove() {
+					var src = this.getAttribute('data-id');
+					this.setAttribute('src', src);
+				}
+				function screenLoad(data) {
+					if (data.length < 1) {
+						document.querySelector('.loadGifs').classList.remove('show');
+						document.getElementById('container-iframes').innerHTML = '<span>'
+						+'Nenuma correspond&ecirc;cia :( </span>';	
+						return;
+					}
+					var gif, container, containerLink, link, i;
+					document.getElementById('container-iframes').innerHTML = '';
+					for (i = 0; i < data.length; i++) {
+						container = document.createElement("DIV");
+						container.className = 'gif-container animated gc'+i;
+						gif = document.createElement("img");
+						//gif.src = 'https://giphy.com/embed/'+data[i]['id'];
+						gif.src = data[i]['images']['fixed_width_downsampled']['url'];
+						gif.className = 'giphy-embed loading';
+						gif.onload = elementLoaded;
+						gif.onmouseover = mouseMove;
+						gif.setAttribute('data-id', data[i]['images']['original']['url']);
+						link = document.createElement("A");
+						link.href = 'https://giphy.com/gifs/'+data[i]['slug'];
+						link.innerText = 'via GIPHY';
+						link.target = '_blank';
+						container.appendChild(gif);
+						container.appendChild(link);
+						document.getElementById('container-iframes').appendChild(container);
+					}
+				}
+				function loadDoc(query) {
+					console.log('procurou por: '+query);
+				  var xhttp = new XMLHttpRequest();
+				  xhttp.onreadystatechange = function() {
+				    if (this.readyState == 4 && this.status == 200) {
+				    	var response = JSON.parse(this.responseText);
+				     	screenLoad(response['data']);
+				    }
+				  };
+				  xhttp.open("GET", "https://api.giphy.com/v1/gifs/search?api_key=ptD8WEVbs2zHa8InTcaWt9C9dnfBJvda&q="+query+"&limit=20&lang=pt", true);
+				  xhttp.send();
+				  document.querySelector('.loadGifs').classList.add('show');
+				}
+				function start() {
+					const recognition = new webkitSpeechRecognition();
+					recognition.interimResults = true;
+					recognition.lang = "pt-BR";
+					recognition.continuous = false;
+					recognition.start();
+					// Este evento ocorre toda vez que falar algo no microfone
+					recognition.onresult = function(event) {
+						for (let i = event.resultIndex; i < event.results.length; i++) {
+							if (event.results[i].isFinal) {
+								// É aqui que será capturado uma palavra ou frase dita no microfone
+								const content = event.results[i][0].transcript.trim();
+								outputText.innerHTML = outputText.innerHTML +'<div class="word">'+ content+'</div>';
+								if (content === 'fechar') {
+									var win = window.open("about:blank", "_self");
+									win.close();
+								} else {
+									loadDoc(content);
+								}
+							}
+						}
+					};
+				};
+				// Tudo vai começar ao clicar no botão para iniciar a função start() acima :)
+				startBtn.addEventListener('click', () => start());
+			})();
+		</script>
+	</body>
+</html>
